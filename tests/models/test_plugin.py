@@ -4,7 +4,6 @@ from ...model import (create)
 
 import unittest
 from mock import MagicMock
-# from alchemy_mock.mocking import UnifiedAlchemyMagicMock
 from nose.tools import assert_raises
 
 from ...model.plugin import Plugin
@@ -63,11 +62,12 @@ class TestPluginSaveValues(DatabaseTest):
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, plugin_name, data)
 
-        plugin._perform_db_operations.assert_called_with([{
-                                                              "lib_id": LIB_ID,
-                                                              "key": plugin_name + "." + key,
-                                                              "value": val
-                                                           }],
+        plugin._perform_db_operations.assert_called_with(self._db,
+                                                         [{
+                                                             "lib_id": LIB_ID,
+                                                             "key": plugin_name + "." + key,
+                                                             "value": val
+                                                          }],
                                                           [],
                                                           [],
                                                          )
@@ -94,13 +94,14 @@ class TestPluginSaveValues(DatabaseTest):
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, pname, data)
 
-        plugin._perform_db_operations.assert_called_with([{
-                                                              "lib_id": LIB_ID,
-                                                              "key": pname + "." + new_key,
-                                                              "value": new_val
-                                                           }],
-                                                          [],
-                                                          [] )
+        plugin._perform_db_operations.assert_called_with(self._db,
+                                                         [{
+                                                             "lib_id": LIB_ID,
+                                                             "key": pname + "." + new_key,
+                                                             "value": new_val
+                                                         }],
+                                                         [],
+                                                         [] )
     def test_update_value(self):
         library, ignore = create(
             self._db, Library, id=LIB_ID, name="Lib", short_name="L1"
@@ -122,7 +123,7 @@ class TestPluginSaveValues(DatabaseTest):
         plugin.save_values(self._db, library.short_name, pname, data)
 
         call_args = plugin._perform_db_operations.call_args
-        to_insert, to_update, to_delete = call_args.args
+        _, to_insert, to_update, to_delete = call_args.args
 
         assert to_insert == []
         assert to_update[0][0].id == plugin_instance.id
@@ -151,7 +152,7 @@ class TestPluginSaveValues(DatabaseTest):
         plugin.save_values(self._db, library.short_name, pname, data)
 
         call_args = plugin._perform_db_operations.call_args
-        to_insert, to_update, to_delete = call_args.args
+        _, to_insert, to_update, to_delete = call_args.args
 
         assert to_insert == []
         assert to_update == []

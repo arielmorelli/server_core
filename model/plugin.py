@@ -21,6 +21,7 @@ class Plugin(ConfigurationSetting):
         try:
             library = self._get_library_from_short_name(_db, library_short_name)
         except Exception as ex:
+            logging.warning("Cannot find library. Ex: %s", ex)
             raise Exception("Cannot find library")
 
         try:
@@ -41,12 +42,14 @@ class Plugin(ConfigurationSetting):
         try:
             library = self._get_library_from_short_name(_db, library_short_name)
         except Exception as ex:
+            logging.warning("Cannot find library. Ex: %s", ex)
             raise Exception("Cannot find the library")
 
         try:
             fields_from_db = self._get_saved_values(_db, library, plugin_name)
         except Exception as ex:
-            raise Exception("Something went wrong while quering saved plugin values.")
+            logging.warning("Cannot get plugin saved values. Ex: %s", ex)
+            raise
 
         to_insert = [] # Expect list of {"id": <id>, "key": <key>, "value": <value>}
         to_update = [] # Expect list of tuples: (<ConfigurationSetting instance>, <new_value>)
@@ -68,9 +71,10 @@ class Plugin(ConfigurationSetting):
         to_delete = to_delete + [fields_from_db[key] for key in no_longer_exist_keys]
 
         try:
-            self._perform_db_operations(to_insert, to_update, to_delete)
+            self._perform_db_operations(_db, to_insert, to_update, to_delete)
         except Exception as ex:
-            raise Exception("Something went wrong while saving plugin values.")
+            logging.error("Cannot save plugin values. Ex: %s", ex)
+            raise
 
     def _get_saved_values(self, _db, library, plugin_name):
         """ Get raw values from a plugin without formating it
@@ -138,10 +142,13 @@ class Plugin(ConfigurationSetting):
             # Delete
             [_db.delete(entry) for entry in to_delete]
         except Exception as ex:
+            logging.error("Cannot perform db operations. Ex: %s", ex)
             raise
 
         try:
             _db.commit()
         except Exception as ex:
+            logging.error("Error while commiting plugin changes. Ex: %s", ex)
             _db.rollback()
+            raise
 
