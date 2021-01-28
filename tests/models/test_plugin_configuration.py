@@ -1,12 +1,12 @@
 # encoding: utf-8
 from .. import DatabaseTest
-from ...model import (create)
+from ...model import create
 
 import unittest
 from mock import MagicMock
 from nose.tools import assert_raises
 
-from ...model.plugin import Plugin
+from ...model.plugin_configuration import PluginConfiguration
 from ...model.library import Library
 
 # Varibles for test cases
@@ -14,7 +14,7 @@ LIB_ID = 1
 
 class TestPluginGetValues(DatabaseTest):
     def test_plugin_get_saved_values_lib_not_valid(self):
-        class MockPlugin(Plugin):
+        class MockPlugin(PluginConfiguration):
             def __init__(self, *args, **kwargs):
                 pass
 
@@ -25,7 +25,7 @@ class TestPluginGetValues(DatabaseTest):
         assert_raises(Exception, mocked_plugin.get_saved_values, "a lib", "a plugin")
 
     def test_plugin_get_saved_values_error_querying_db(self):
-        class MockPlugin(Plugin):
+        class MockPlugin(PluginConfiguration):
             def __init__(self, *args, **kwargs):
                 pass
 
@@ -40,12 +40,12 @@ class TestPluginGetValues(DatabaseTest):
 
 
 class TestPluginSaveValues(DatabaseTest):
-    class MockPlugin(Plugin):
+    class MockPlugin(PluginConfiguration):
         def __init__(self, *args, **kwargs):
             pass
 
     def test_library_not_found(self):
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         assert_raises(Exception, plugin.save_values, "library", "plugin", {})
 
     def test_insert_value_db_empty(self):
@@ -58,7 +58,7 @@ class TestPluginSaveValues(DatabaseTest):
         val = "value to test"
         data = {key: val}
 
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, plugin_name, data)
 
@@ -86,11 +86,11 @@ class TestPluginSaveValues(DatabaseTest):
         data = {new_key: new_val, key_to_keep: val_to_keep}
 
         _, _ = create(
-            self._db, Plugin, id=1, library_id=library.id, key=pname+"."+key_to_keep,
+            self._db, PluginConfiguration, id=1, library_id=library.id, key=pname+"."+key_to_keep,
             _value=val_to_keep
         )
 
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, pname, data)
 
@@ -114,11 +114,11 @@ class TestPluginSaveValues(DatabaseTest):
         data = {key_to_update: new_val}
 
         plugin_instance, _ = create(
-            self._db, Plugin, id=1, library_id=library.id, key=pname+"."+key_to_update,
+            self._db, PluginConfiguration, id=1, library_id=library.id, key=pname+"."+key_to_update,
             _value=new_val+" old"
         )
 
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, pname, data)
 
@@ -143,11 +143,11 @@ class TestPluginSaveValues(DatabaseTest):
         data = {}
 
         plugin_instance, _ = create(
-            self._db, Plugin, id=1, library_id=library.id, key=pname+"."+key_to_delete,
+            self._db, PluginConfiguration, id=1, library_id=library.id, key=pname+"."+key_to_delete,
             _value=val_to_delete
         )
 
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, pname, data)
 
@@ -164,7 +164,7 @@ class TestPluginGetSavedValues(DatabaseTest):
         library, ignore = create(
             self._db, Library, id=LIB_ID, name="Lib", short_name="L1"
         )
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         saved_values = plugin._get_saved_values(self._db, library, "any_plugin")
         assert saved_values == {}
 
@@ -180,13 +180,13 @@ class TestPluginGetSavedValues(DatabaseTest):
         )
 
         plugin1, ignore = create(
-            self._db, Plugin, id=1, library_id=library.id, key=pname+"."+key1, _value=value1
+            self._db, PluginConfiguration, id=1, library_id=library.id, key=pname+"."+key1, _value=value1
         )
         plugin2, ignore = create(
-            self._db, Plugin, id=2, library_id=library.id, key=pname+"."+key2, _value=value2
+            self._db, PluginConfiguration, id=2, library_id=library.id, key=pname+"."+key2, _value=value2
         )
         
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         saved_values = plugin._get_saved_values(self._db, library, pname)
         assert key1 in saved_values
         assert saved_values[key1]._value == value1
@@ -202,13 +202,13 @@ class TestPluginFromShortName(DatabaseTest):
             self._db, Library, id=LIB_ID, name=name, short_name=short_name
         )
 
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         library = plugin._get_library_from_short_name(self._db, short_name)
         assert library.name == inserted_library.name 
         assert library.id == inserted_library.id
         assert library.short_name == inserted_library.short_name
 
     def test_plugin_dont_find_library(self):
-        plugin = Plugin()
+        plugin = PluginConfiguration()
         assert_raises(Exception, plugin._get_library_from_short_name, self._db, "any_name")
 

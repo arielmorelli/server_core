@@ -3,7 +3,7 @@ from library import Library
 from . import get_one
 
 
-class Plugin(ConfigurationSetting):
+class PluginConfiguration(ConfigurationSetting):
     """ Plugin is a ConfigurationSetting with specific behavior. """
 
     def get_saved_values(self, _db, library_short_name, plugin_name):
