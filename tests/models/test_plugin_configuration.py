@@ -65,7 +65,7 @@ class TestPluginSaveValues(DatabaseTest):
         plugin._perform_db_operations.assert_called_with(self._db,
                                                          [{
                                                              "lib_id": LIB_ID,
-                                                             "key": plugin_name + "." + key,
+                                                             "target_key": plugin_name + "." + key,
                                                              "value": val
                                                           }],
                                                           [],
@@ -97,7 +97,7 @@ class TestPluginSaveValues(DatabaseTest):
         plugin._perform_db_operations.assert_called_with(self._db,
                                                          [{
                                                              "lib_id": LIB_ID,
-                                                             "key": pname + "." + new_key,
+                                                             "target_key": pname + "." + new_key,
                                                              "value": new_val
                                                          }],
                                                          [],
@@ -126,7 +126,7 @@ class TestPluginSaveValues(DatabaseTest):
                                                          [],
                                                          [{
                                                              "lib_id": LIB_ID,
-                                                             "key": pname + "." + key_to_update,
+                                                             "target_key": pname + "." + key_to_update,
                                                              "value": new_val
                                                          }],
                                                          [] )
@@ -156,7 +156,7 @@ class TestPluginSaveValues(DatabaseTest):
                                                          [],
                                                          [{
                                                              "lib_id": LIB_ID,
-                                                             "key": pname + "." + key_to_delete,
+                                                             "target_key": pname + "." + key_to_delete,
                                                          }])
 
 class TestPluginGetSavedValues(DatabaseTest):
