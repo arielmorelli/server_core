@@ -1,6 +1,10 @@
 from configuration import ConfigurationSetting
 from library import Library
 from . import get_one
+from sqlalchemy.sql.expression import bindparam
+from sqlalchemy import and_, insert, update, delete
+
+import logging
 
 
 class PluginConfiguration(ConfigurationSetting):
@@ -22,11 +26,12 @@ class PluginConfiguration(ConfigurationSetting):
             library = self._get_library_from_short_name(_db, library_short_name)
         except Exception as ex:
             logging.warning("Cannot find library. Ex: %s", ex)
-            raise Exception("Cannot find library")
+            raise
 
         try:
             return self._get_saved_values(_db, library, plugin_name)
         except Exception as ex:
+            logging.error("Cannot save values. Ex: %s", ex)
             raise Exception("Something went wrong while quering saved plugin values.")
 
     def save_values(self, _db, library_short_name, plugin_name, new_values):
@@ -51,24 +56,30 @@ class PluginConfiguration(ConfigurationSetting):
             logging.warning("Cannot get plugin saved values. Ex: %s", ex)
             raise
 
-        to_insert = [] # Expect list of {"id": <id>, "key": <key>, "value": <value>}
-        to_update = [] # Expect list of tuples: (<ConfigurationSetting instance>, <new_value>)
-        to_delete = [] # Expect list of ConfigurationSetting instaces
+        to_insert = [] # Expect list of {"lib_id": <lib_id>, "key": <target_key>, "value": <value>}
+        to_update = [] # Expect list of {"lib_id": <lib_id>, "key": <target_key>, "value": <value>}
+        to_delete = [] # Expect list of {"lib_id": <lib_id>, "key": <target_key>}
 
         for key, value in new_values.items():
             if key == None:
                 continue
             elif not fields_from_db.get(key) and value is not None:
-                to_insert.append({ "lib_id": library.id, "key": plugin_name+"."+key, "value": value})
+                to_insert.append(
+                    { "lib_id": library.id, "target_key": plugin_name+"."+key, "value": value}
+                )
             elif fields_from_db.get(key) and value is None:
-                to_delete.append(fields_from_db.get(key))
+                to_delete.append(
+                    { "lib_id": library.id, "target_key": plugin_name+"."+key}
+                )
             elif ( fields_from_db.get(key) and
-                  fields_from_db[key]._value != value ):
-                fields_from_db[key]._value = value
-                to_update.append( (fields_from_db[key], value) )
+                  fields_from_db[key] != value ):
+                to_update.append(
+                    { "lib_id": library.id, "target_key": plugin_name+"."+key, "value": value}
+                )
 
         no_longer_exist_keys = set(fields_from_db.keys()) - set(new_values.keys())
-        to_delete = to_delete + [fields_from_db[key] for key in no_longer_exist_keys]
+        to_delete = to_delete + [{ "lib_id": library.id, "target_key": plugin_name+"."+key}
+                                 for key in no_longer_exist_keys]
 
         try:
             self._perform_db_operations(_db, to_insert, to_update, to_delete)
@@ -95,7 +106,7 @@ class PluginConfiguration(ConfigurationSetting):
 
         values = {}
         for entry in response:
-            values[entry.key[len(plugin_name)+1:]] = entry
+            values[entry.key[len(plugin_name)+1:]] = entry._value
         return values
 
     def _get_library_from_short_name(self, _db, library_short_name):
@@ -130,19 +141,35 @@ class PluginConfiguration(ConfigurationSetting):
             return
         try:
             # Insert
-            [_db.add(ConfigurationSetting(library_id=entry["lib_id"],
-                                               key=entry["key"],
-                                               _value=entry["value"])
-                ) for entry in to_insert
-            ]
+            if to_insert:
+                insert_stmt = update(PluginConfiguration).values(
+                    library_id=bindparam("lib_id"),
+                    key=bindparam("target_key"),
+                    value=bindparam("value")
+                )
+                _db.execute(insert_stmt, to_insert)
+
             # Update
-            for entry in to_update:
-                entry[0]._value = entry[1]
+            if to_update:
+                update_stmt = update(PluginConfiguration).where(
+                    and_(
+                         PluginConfiguration.library_id == bindparam("lib_id"),
+                         PluginConfiguration.key == bindparam("target_key"),
+                    )
+                ).values(value=bindparam("value"))
+                _db.execute(update_stmt, to_update)
 
             # Delete
-            [_db.delete(entry) for entry in to_delete]
-        except Exception as ex:
-            logging.error("Cannot perform db operations. Ex: %s", ex)
+            if to_delete:
+                delete_stmt = delete(PluginConfiguration).where(
+                    and_(
+                         PluginConfiguration.library_id == bindparam("lib_id"),
+                         PluginConfiguration.key == bindparam("target_key"),
+                    )
+                )
+                _db.execute(delete_stmt, to_delete)
+        except Exception as err:
+            logging.error("Cannot perform db operations. Er: %s", err)
             raise
 
         try:

@@ -102,7 +102,7 @@ class TestPluginSaveValues(DatabaseTest):
                                                          }],
                                                          [],
                                                          [] )
-    def test_update_value(self):
+    def test_update_values(self):
         library, ignore = create(
             self._db, Library, id=LIB_ID, name="Lib", short_name="L1"
         )
@@ -122,14 +122,14 @@ class TestPluginSaveValues(DatabaseTest):
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, pname, data)
 
-        call_args = plugin._perform_db_operations.call_args
-        _, to_insert, to_update, to_delete = call_args.args
-
-        assert to_insert == []
-        assert to_update[0][0].id == plugin_instance.id
-        assert to_update[0][0].key == plugin_instance.key
-        assert to_update[0][1] == new_val
-        assert to_delete == []
+        plugin._perform_db_operations.assert_called_with(self._db,
+                                                         [],
+                                                         [{
+                                                             "lib_id": LIB_ID,
+                                                             "key": pname + "." + key_to_update,
+                                                             "value": new_val
+                                                         }],
+                                                         [] )
 
     def test_delete_value(self):
         library, ignore = create(
@@ -151,13 +151,13 @@ class TestPluginSaveValues(DatabaseTest):
         plugin._perform_db_operations = MagicMock()
         plugin.save_values(self._db, library.short_name, pname, data)
 
-        call_args = plugin._perform_db_operations.call_args
-        _, to_insert, to_update, to_delete = call_args.args
-
-        assert to_insert == []
-        assert to_update == []
-        assert to_delete[0].id == plugin_instance.id
-        assert to_delete[0].key == plugin_instance.key
+        plugin._perform_db_operations.assert_called_with(self._db,
+                                                         [],
+                                                         [],
+                                                         [{
+                                                             "lib_id": LIB_ID,
+                                                             "key": pname + "." + key_to_delete,
+                                                         }])
 
 class TestPluginGetSavedValues(DatabaseTest):
     def test_plugin_empty_values(self):
@@ -189,9 +189,9 @@ class TestPluginGetSavedValues(DatabaseTest):
         plugin = PluginConfiguration()
         saved_values = plugin._get_saved_values(self._db, library, pname)
         assert key1 in saved_values
-        assert saved_values[key1]._value == value1
+        assert saved_values[key1] == value1
         assert key2 in saved_values
-        assert saved_values[key2]._value == value2
+        assert saved_values[key2] == value2
 
 
 class TestPluginFromShortName(DatabaseTest):
