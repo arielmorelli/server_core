@@ -59,7 +59,6 @@ class PluginConfiguration(ConfigurationSetting):
         to_insert = [] # Expect list of {"lib_id": <lib_id>, "key": <target_key>, "value": <value>}
         to_update = [] # Expect list of {"lib_id": <lib_id>, "key": <target_key>, "value": <value>}
         to_delete = [] # Expect list of {"lib_id": <lib_id>, "key": <target_key>}
-
         for key, value in new_values.items():
             if key == None:
                 continue
@@ -142,7 +141,8 @@ class PluginConfiguration(ConfigurationSetting):
         try:
             # Insert
             if to_insert:
-                insert_stmt = update(PluginConfiguration).values(
+                insert_stmt = insert(PluginConfiguration).values(
+                    external_integration_id=None,
                     library_id=bindparam("lib_id"),
                     key=bindparam("target_key"),
                     value=bindparam("value")
